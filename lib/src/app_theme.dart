@@ -89,7 +89,6 @@ ThemeData darkTheme() {
     onPrimary: _kDarkOnSurface,
     secondary: _kDarkAccent,
     surface: _kDarkSurfaceSoft,
-    background: _kDarkBackgroundSoft,
     onSurface: _kDarkOnSurface,
     brightness: Brightness.dark,
   );
