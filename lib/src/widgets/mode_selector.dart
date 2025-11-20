@@ -9,27 +9,29 @@ class ModeSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        ChoiceChip(
-          label: const Text('Pace'),
-          selected: mode == CalcMode.pace,
-          onSelected: (_) => onChanged(CalcMode.pace),
-        ),
-        const SizedBox(width: 8),
-        ChoiceChip(
-          label: const Text('Time'),
-          selected: mode == CalcMode.time,
-          onSelected: (_) => onChanged(CalcMode.time),
-        ),
-        const SizedBox(width: 8),
-        ChoiceChip(
-          label: const Text('Distance'),
-          selected: mode == CalcMode.distance,
-          onSelected: (_) => onChanged(CalcMode.distance),
-        ),
-      ],
+    return Center(
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 6,
+        alignment: WrapAlignment.center,
+        children: [
+          ChoiceChip(
+            label: const Text('Pace'),
+            selected: mode == CalcMode.pace,
+            onSelected: (_) => onChanged(CalcMode.pace),
+          ),
+          ChoiceChip(
+            label: const Text('Time'),
+            selected: mode == CalcMode.time,
+            onSelected: (_) => onChanged(CalcMode.time),
+          ),
+          ChoiceChip(
+            label: const Text('Distance'),
+            selected: mode == CalcMode.distance,
+            onSelected: (_) => onChanged(CalcMode.distance),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -13,16 +13,16 @@ class PaceUnitSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return Wrap(
+      spacing: 8,
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         const Text('Pace unit:'),
-        const SizedBox(width: 12),
         ChoiceChip(
           label: const Text('per km'),
           selected: paceUnit == PaceUnit.perKm,
           onSelected: (_) => onChanged(PaceUnit.perKm),
         ),
-        const SizedBox(width: 8),
         ChoiceChip(
           label: const Text('per mile'),
           selected: paceUnit == PaceUnit.perMile,

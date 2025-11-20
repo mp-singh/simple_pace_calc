@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../utils/input_formatters.dart';
 import '../utils/conversions.dart';
 import '../utils/time_utils.dart';
 import '../models/enums.dart';
-import '../widgets/duration_picker.dart';
+// labels util intentionally available if needed; keep for consistency
+// duration picker used by DurationInput
+import '../widgets/mode_selector.dart';
+import '../widgets/pace_unit_selector.dart';
+import '../widgets/distance_input.dart';
+import '../widgets/duration_input.dart';
 
 class PaceHomePage extends StatefulWidget {
   const PaceHomePage({
@@ -158,25 +162,7 @@ class _PaceHomePageState extends State<PaceHomePage> {
     });
   }
 
-  String _distanceUnitLabel(DistanceUnit u) {
-    switch (u) {
-      case DistanceUnit.meters:
-        return 'Meters';
-      case DistanceUnit.kilometers:
-        return 'Kilometers';
-      case DistanceUnit.miles:
-        return 'Miles';
-    }
-  }
-
-  String _paceUnitLabel(PaceUnit p) {
-    switch (p) {
-      case PaceUnit.perKm:
-        return 'per km';
-      case PaceUnit.perMile:
-        return 'per mile';
-    }
-  }
+  // moved label helpers to `lib/src/utils/labels.dart`
 
   Widget _buildConversionCard(
     BuildContext context,
@@ -191,9 +177,30 @@ class _PaceHomePageState extends State<PaceHomePage> {
           children: [
             Text(label, style: Theme.of(context).textTheme.bodySmall),
             const SizedBox(height: 6),
-            Text(
-              value,
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Text(
+                    value,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Copy',
+                  icon: const Icon(Icons.copy, size: 18),
+                  onPressed: () {
+                    Clipboard.setData(ClipboardData(text: value));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Copied to clipboard')),
+                    );
+                  },
+                ),
+              ],
             ),
           ],
         ),
@@ -201,30 +208,7 @@ class _PaceHomePageState extends State<PaceHomePage> {
     );
   }
 
-  Widget _buildModeSelector() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        ChoiceChip(
-          label: const Text('Pace'),
-          selected: _mode == CalcMode.pace,
-          onSelected: (_) => _switchMode(CalcMode.pace),
-        ),
-        const SizedBox(width: 8),
-        ChoiceChip(
-          label: const Text('Time'),
-          selected: _mode == CalcMode.time,
-          onSelected: (_) => _switchMode(CalcMode.time),
-        ),
-        const SizedBox(width: 8),
-        ChoiceChip(
-          label: const Text('Distance'),
-          selected: _mode == CalcMode.distance,
-          onSelected: (_) => _switchMode(CalcMode.distance),
-        ),
-      ],
-    );
-  }
+  // Mode selector is provided by `ModeSelector` widget.
 
   void _switchMode(CalcMode newMode) {
     if (newMode == _mode) return;
@@ -284,199 +268,49 @@ class _PaceHomePageState extends State<PaceHomePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _buildModeSelector(),
+              ModeSelector(mode: _mode, onChanged: _switchMode),
               const SizedBox(height: 16),
 
-              // inputs
-              if (_mode != CalcMode.time) ...[
-                const Text('Time (hh:mm:ss or mm:ss)'),
-                const SizedBox(height: 8),
-                ValueListenableBuilder<TextEditingValue>(
-                  valueListenable: _timeController,
-                  builder: (context, value, child) {
-                    return TextFormField(
-                      controller: _timeController,
-                      decoration: InputDecoration(
-                        border: const OutlineInputBorder(),
-                        hintText: 'e.g. 00:04:46',
-                        suffixIcon: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (value.text.isNotEmpty)
-                              IconButton(
-                                icon: const Icon(Icons.clear),
-                                onPressed: () => _timeController.clear(),
-                              ),
-                            IconButton(
-                              tooltip: 'Pick duration',
-                              icon: const Icon(Icons.timer),
-                              onPressed: () async {
-                                final picked = await showDurationPicker(
-                                  context,
-                                );
-                                if (picked != null) {
-                                  _timeController.text = formatSeconds(picked);
-                                }
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [TimeInputFormatter()],
-                      validator: (v) {
-                        if (v == null || v.trim().isEmpty) return 'Enter time';
-                        if (parseTimeToSeconds(v) == null) {
-                          return 'Invalid time';
-                        }
-                        return null;
-                      },
-                    );
+              // inputs (delegated to widget components)
+              if (_mode != CalcMode.time)
+                DurationInput(
+                  controller: _timeController,
+                  label: 'Time (hh:mm:ss or mm:ss)',
+                  hint: 'e.g. 00:04:46',
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) return 'Enter time';
+                    if (parseTimeToSeconds(v) == null) return 'Invalid time';
+                    return null;
                   },
                 ),
-                const SizedBox(height: 12),
-              ],
-
-              if (_mode != CalcMode.pace) ...[
-                const Text('Pace (mm:ss)'),
-                const SizedBox(height: 8),
-                ValueListenableBuilder<TextEditingValue>(
-                  valueListenable: _paceController,
-                  builder: (context, value, child) {
-                    return TextFormField(
-                      controller: _paceController,
-                      decoration: InputDecoration(
-                        border: const OutlineInputBorder(),
-                        hintText: 'e.g. 05:00',
-                        suffixIcon: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (value.text.isNotEmpty)
-                              IconButton(
-                                icon: const Icon(Icons.clear),
-                                onPressed: () => _paceController.clear(),
-                              ),
-                            IconButton(
-                              tooltip: 'Pick pace',
-                              icon: const Icon(Icons.timer),
-                              onPressed: () async {
-                                final picked = await showDurationPicker(
-                                  context,
-                                );
-                                if (picked != null) {
-                                  _paceController.text = formatSeconds(picked);
-                                }
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [TimeInputFormatter()],
-                      validator: (v) {
-                        if (v == null || v.trim().isEmpty) return 'Enter pace';
-                        if (parseTimeToSeconds(v) == null) {
-                          return 'Invalid pace';
-                        }
-                        return null;
-                      },
-                    );
+              if (_mode != CalcMode.pace)
+                DurationInput(
+                  controller: _paceController,
+                  label: 'Pace (mm:ss)',
+                  hint: 'e.g. 05:00',
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) return 'Enter pace';
+                    if (parseTimeToSeconds(v) == null) return 'Invalid pace';
+                    return null;
                   },
                 ),
-                const SizedBox(height: 12),
-              ],
-
-              if (_mode != CalcMode.distance) ...[
-                const Text('Distance'),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: ValueListenableBuilder<TextEditingValue>(
-                        valueListenable: _distanceController,
-                        builder: (context, value, child) {
-                          return TextFormField(
-                            controller: _distanceController,
-                            decoration: InputDecoration(
-                              border: const OutlineInputBorder(),
-                              hintText: 'e.g. 232',
-                              suffixIcon: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  if (value.text.isNotEmpty)
-                                    IconButton(
-                                      icon: const Icon(Icons.clear),
-                                      onPressed: () =>
-                                          _distanceController.clear(),
-                                    ),
-                                ],
-                              ),
-                            ),
-                            keyboardType: const TextInputType.numberWithOptions(
-                              decimal: true,
-                            ),
-                            inputFormatters: [
-                              FilteringTextInputFormatter.allow(
-                                RegExp(r'[0-9.,]'),
-                              ),
-                            ],
-                            validator: (v) {
-                              if (v == null || v.trim().isEmpty) {
-                                return 'Enter distance';
-                              }
-                              final d = double.tryParse(v.replaceAll(',', ''));
-                              if (d == null || d <= 0) {
-                                return 'Invalid distance';
-                              }
-                              return null;
-                            },
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    DropdownButton<DistanceUnit>(
-                      value: _distanceUnit,
-                      onChanged: (v) => setState(() => _distanceUnit = v!),
-                      items: const [
-                        DropdownMenuItem(
-                          value: DistanceUnit.meters,
-                          child: Text('Meters'),
-                        ),
-                        DropdownMenuItem(
-                          value: DistanceUnit.kilometers,
-                          child: Text('Kilometers'),
-                        ),
-                        DropdownMenuItem(
-                          value: DistanceUnit.miles,
-                          child: Text('Miles'),
-                        ),
-                      ],
-                    ),
-                  ],
+              if (_mode != CalcMode.distance)
+                DistanceInput(
+                  controller: _distanceController,
+                  unit: _distanceUnit,
+                  onUnitChanged: (u) => setState(() => _distanceUnit = u),
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) return 'Enter distance';
+                    final d = double.tryParse(v.replaceAll(',', ''));
+                    if (d == null || d <= 0) return 'Invalid distance';
+                    return null;
+                  },
                 ),
-                const SizedBox(height: 12),
-              ],
 
               // pace unit selector
-              Row(
-                children: [
-                  const Text('Pace unit:'),
-                  const SizedBox(width: 12),
-                  ChoiceChip(
-                    label: const Text('per km'),
-                    selected: _paceUnit == PaceUnit.perKm,
-                    onSelected: (_) =>
-                        setState(() => _paceUnit = PaceUnit.perKm),
-                  ),
-                  const SizedBox(width: 8),
-                  ChoiceChip(
-                    label: const Text('per mile'),
-                    selected: _paceUnit == PaceUnit.perMile,
-                    onSelected: (_) =>
-                        setState(() => _paceUnit = PaceUnit.perMile),
-                  ),
-                ],
+              PaceUnitSelector(
+                paceUnit: _paceUnit,
+                onChanged: (p) => setState(() => _paceUnit = p),
               ),
 
               const SizedBox(height: 16),
@@ -496,41 +330,50 @@ class _PaceHomePageState extends State<PaceHomePage> {
                 ),
               ),
               const SizedBox(height: 8),
-              Text(
-                'Selected: ${_distanceUnitLabel(_distanceUnit)} • ${_paceUnitLabel(_paceUnit)}',
-                style: TextStyle(
-                  color: Theme.of(context).textTheme.bodySmall?.color,
-                ),
-              ),
-              const SizedBox(height: 8),
               if (_lastDistanceMeters != null) ...[
                 const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildConversionCard(
-                        context,
-                        'Meters',
-                        _lastDistanceMeters!.toStringAsFixed(2),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: _buildConversionCard(
-                        context,
-                        'Kilometers',
-                        (_lastDistanceMeters! / 1000.0).toStringAsFixed(3),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: _buildConversionCard(
-                        context,
-                        'Miles',
-                        (_lastDistanceMeters! / 1609.344).toStringAsFixed(3),
-                      ),
-                    ),
-                  ],
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    // calculate a reasonable card width based on available space
+                    final available = constraints.maxWidth;
+                    // when wide, show three cards in a row; otherwise allow wrapping
+                    final cardWidth = available > 560
+                        ? (available - 16) / 3
+                        : (available * 0.9);
+
+                    return Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        SizedBox(
+                          width: cardWidth,
+                          child: _buildConversionCard(
+                            context,
+                            'Meters',
+                            _lastDistanceMeters!.toStringAsFixed(2),
+                          ),
+                        ),
+                        SizedBox(
+                          width: cardWidth,
+                          child: _buildConversionCard(
+                            context,
+                            'Kilometers',
+                            (_lastDistanceMeters! / 1000.0).toStringAsFixed(3),
+                          ),
+                        ),
+                        SizedBox(
+                          width: cardWidth,
+                          child: _buildConversionCard(
+                            context,
+                            'Miles',
+                            (_lastDistanceMeters! / 1609.344).toStringAsFixed(
+                              3,
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ],
               const SizedBox(height: 8),
