@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../utils/conversions.dart';
 import '../utils/time_utils.dart';
+import '../utils/fieldhouse_utils.dart';
 import '../models/enums.dart';
 // labels util intentionally available if needed; keep for consistency
 // duration picker used by DurationInput
@@ -9,6 +10,7 @@ import '../widgets/mode_selector.dart';
 import '../widgets/pace_unit_selector.dart';
 import '../widgets/distance_input.dart';
 import '../widgets/duration_input.dart';
+import '../widgets/fieldhouse_lane_selector.dart';
 
 class PaceHomePage extends StatefulWidget {
   const PaceHomePage({
@@ -28,6 +30,12 @@ class _PaceHomePageState extends State<PaceHomePage> {
   CalcMode _mode = CalcMode.pace;
   DistanceUnit _distanceUnit = DistanceUnit.meters;
   PaceUnit _paceUnit = PaceUnit.perKm;
+  // Fieldhouse specific
+  int _fieldhouseLane = 1;
+  final TextEditingController _fieldhouseCustomController =
+      TextEditingController();
+  // when true, use the custom lap length value and disable lane selector
+  bool _useCustomLap = false;
 
   final TextEditingController _timeController = TextEditingController();
   final TextEditingController _distanceController = TextEditingController();
@@ -36,11 +44,14 @@ class _PaceHomePageState extends State<PaceHomePage> {
 
   String _result = '';
   double? _lastDistanceMeters;
+  // structured results for Fieldhouse mode (lane/custom results)
+  List<Map<String, String>> _fieldhouseResults = [];
   // cache inputs per mode so each mode remembers its own values
   final Map<CalcMode, Map<String, String>> _modeCache = {
     CalcMode.pace: {},
     CalcMode.time: {},
     CalcMode.distance: {},
+    CalcMode.fieldhouse: {},
   };
 
   @override
@@ -48,6 +59,7 @@ class _PaceHomePageState extends State<PaceHomePage> {
     _timeController.dispose();
     _distanceController.dispose();
     _paceController.dispose();
+    _fieldhouseCustomController.dispose();
     super.dispose();
   }
 
@@ -157,6 +169,88 @@ class _PaceHomePageState extends State<PaceHomePage> {
         _result = 'Distance: $out';
         return;
       }
+      if (_mode == CalcMode.fieldhouse) {
+        // Fieldhouse: compute lap pace based on selected lane length or custom lap
+        final paceSec = parseTimeToSeconds(paceText);
+        if (paceSec == null) {
+          _result = 'Enter valid pace';
+          return;
+        }
+
+        // If custom lap is enabled, show only that single text result.
+        if (_useCustomLap) {
+          final custom = _fieldhouseCustomController.text.trim();
+          if (custom.isEmpty) {
+            _result = 'Enter custom lap length or disable custom';
+            _fieldhouseResults.clear();
+            return;
+          }
+          final parsed = double.tryParse(custom.replaceAll(',', ''));
+          if (parsed == null || parsed <= 0) {
+            _result = 'Invalid custom lap length';
+            _fieldhouseResults.clear();
+            return;
+          }
+          final lapSecs = computeLapPaceSeconds(paceSec, _paceUnit, parsed);
+          if (lapSecs == null) {
+            _result = 'Could not compute lap pace';
+            _fieldhouseResults.clear();
+            return;
+          }
+          _lastDistanceMeters = parsed;
+          _fieldhouseResults.clear();
+          _result =
+              'Custom lap (${parsed.toStringAsFixed(2)} m): ${formatSeconds(lapSecs)}';
+          return;
+        }
+
+        // Non-custom: show selected lane (first) plus lanes 3..6 always, as text.
+        final List<int> lanes = [];
+        final seen = <int>{};
+        if (_fieldhouseLane >= 1 && _fieldhouseLane <= 6) {
+          lanes.add(_fieldhouseLane);
+          seen.add(_fieldhouseLane);
+        }
+        for (var l = 3; l <= 6; l++) {
+          if (!seen.contains(l)) {
+            lanes.add(l);
+            seen.add(l);
+          }
+        }
+
+        final List<Map<String, String>> results = [];
+        double? firstLapMeters;
+        for (final l in lanes) {
+          double lapMeters;
+          try {
+            lapMeters = lapMetersForLane(l, laneMap: defaultLaneLapMeters);
+          } catch (e) {
+            // skip invalid lanes
+            continue;
+          }
+          final lapSecs = computeLapPaceSeconds(paceSec, _paceUnit, lapMeters);
+          if (lapSecs == null) continue;
+          if (firstLapMeters == null) firstLapMeters = lapMeters;
+          results.add({
+            'lane': l.toString(),
+            'label': 'Lane $l',
+            'meters': lapMeters.toStringAsFixed(2),
+            'pace': formatSeconds(lapSecs),
+          });
+        }
+        if (results.isEmpty) {
+          _result = 'Could not compute lap paces';
+          _fieldhouseResults.clear();
+          return;
+        }
+        _lastDistanceMeters = firstLapMeters;
+        _fieldhouseResults = results;
+        // keep a newline text fallback for copy/paste; but primary UI will use structured results
+        _result = _fieldhouseResults
+            .map((r) => '${r['label']} — ${r['meters']} m: ${r['pace']}')
+            .join('\n');
+        return;
+      }
       // For non-distance results clear the last distance cache
       _lastDistanceMeters = null;
     });
@@ -217,6 +311,9 @@ class _PaceHomePageState extends State<PaceHomePage> {
       'time': _timeController.text,
       'pace': _paceController.text,
       'distance': _distanceController.text,
+      'fieldhouseLane': _fieldhouseLane.toString(),
+      'fieldhouseCustom': _fieldhouseCustomController.text,
+      'fieldhouseUseCustom': _useCustomLap.toString(),
       'distanceUnit': _distanceUnit.index.toString(),
       'paceUnit': _paceUnit.index.toString(),
     };
@@ -226,6 +323,19 @@ class _PaceHomePageState extends State<PaceHomePage> {
     _timeController.text = saved['time'] ?? '';
     _paceController.text = saved['pace'] ?? '';
     _distanceController.text = saved['distance'] ?? '';
+    if (saved.containsKey('fieldhouseLane')) {
+      final idx = int.tryParse(saved['fieldhouseLane']!);
+      if (idx != null && idx >= 1 && idx <= 6) {
+        _fieldhouseLane = idx;
+      }
+    }
+    _fieldhouseCustomController.text = saved['fieldhouseCustom'] ?? '';
+    if (saved.containsKey('fieldhouseUseCustom')) {
+      _useCustomLap = saved['fieldhouseUseCustom'] == 'true';
+    }
+    // Clear any lingering validation errors when switching modes so hidden
+    // fields do not keep showing errors after a mode change.
+    _formKey.currentState?.reset();
     if (saved.containsKey('distanceUnit')) {
       final idx = int.tryParse(saved['distanceUnit']!);
       if (idx != null && idx >= 0 && idx < DistanceUnit.values.length) {
@@ -238,6 +348,9 @@ class _PaceHomePageState extends State<PaceHomePage> {
         _paceUnit = PaceUnit.values[idx];
       }
     }
+
+    // clear fieldhouse results when switching away
+    if (newMode != CalcMode.fieldhouse) _fieldhouseResults.clear();
 
     setState(() {
       _mode = newMode;
@@ -272,7 +385,7 @@ class _PaceHomePageState extends State<PaceHomePage> {
               const SizedBox(height: 16),
 
               // inputs (delegated to widget components)
-              if (_mode != CalcMode.time)
+              if (_mode != CalcMode.time && _mode != CalcMode.fieldhouse)
                 DurationInput(
                   controller: _timeController,
                   label: 'Time (hh:mm:ss or mm:ss)',
@@ -283,7 +396,7 @@ class _PaceHomePageState extends State<PaceHomePage> {
                     return null;
                   },
                 ),
-              if (_mode != CalcMode.pace)
+              if (_mode != CalcMode.pace || _mode == CalcMode.fieldhouse)
                 DurationInput(
                   controller: _paceController,
                   label: 'Pace (mm:ss)',
@@ -294,7 +407,7 @@ class _PaceHomePageState extends State<PaceHomePage> {
                     return null;
                   },
                 ),
-              if (_mode != CalcMode.distance)
+              if (_mode != CalcMode.distance && _mode != CalcMode.fieldhouse)
                 DistanceInput(
                   controller: _distanceController,
                   unit: _distanceUnit,
@@ -305,6 +418,63 @@ class _PaceHomePageState extends State<PaceHomePage> {
                     if (d == null || d <= 0) return 'Invalid distance';
                     return null;
                   },
+                ),
+              if (_mode == CalcMode.fieldhouse)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8.0),
+                  child: FieldhouseLaneSelector(
+                    lane: _fieldhouseLane,
+                    enabled: !_useCustomLap,
+                    onChanged: (l) => setState(() {
+                      _fieldhouseLane = l;
+                      _useCustomLap = false;
+                    }),
+                  ),
+                ),
+              if (_mode == CalcMode.fieldhouse)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8.0),
+                  child: SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Use custom lap length'),
+                    value: _useCustomLap,
+                    onChanged: (v) => setState(() => _useCustomLap = v),
+                  ),
+                ),
+              if (_mode == CalcMode.fieldhouse)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4.0),
+                  child: TextFormField(
+                    enabled: _useCustomLap,
+                    controller: _fieldhouseCustomController,
+                    decoration: InputDecoration(
+                      labelText: 'Custom lap length (m) — optional',
+                      hintText: 'e.g. 206.28',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        vertical: 12,
+                        horizontal: 12,
+                      ),
+                      filled: true,
+                      fillColor: Theme.of(
+                        context,
+                      ).inputDecorationTheme.fillColor,
+                    ),
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    validator: (v) {
+                      if (!_useCustomLap) return null;
+                      if (v == null || v.trim().isEmpty) {
+                        return 'Enter lap length';
+                      }
+                      final d = double.tryParse(v.replaceAll(',', ''));
+                      if (d == null || d <= 0) return 'Invalid lap length';
+                      return null;
+                    },
+                  ),
                 ),
 
               // pace unit selector
@@ -320,17 +490,70 @@ class _PaceHomePageState extends State<PaceHomePage> {
               ),
 
               const SizedBox(height: 20),
+              const SizedBox(height: 20),
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(16),
-                  child: Text(
-                    _result.isEmpty ? 'Result will appear here' : _result,
-                    style: const TextStyle(fontSize: 16),
-                  ),
+                  child:
+                      _mode == CalcMode.fieldhouse &&
+                          _fieldhouseResults.isNotEmpty
+                      ? Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: _fieldhouseResults.map((r) {
+                            final laneStr = r['lane'];
+                            final label = r['label'] ?? '';
+                            final meters = r['meters'] ?? '';
+                            final pace = r['pace'] ?? '';
+                            final selected =
+                                !_useCustomLap &&
+                                laneStr != null &&
+                                int.tryParse(laneStr) == _fieldhouseLane;
+                            final theme = Theme.of(context);
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 6),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      '$label — $meters m',
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: selected
+                                            ? FontWeight.w700
+                                            : FontWeight.w500,
+                                        color: selected
+                                            ? theme.colorScheme.primary
+                                            : null,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Text(
+                                    pace,
+                                    style: TextStyle(
+                                      fontFeatures: const [
+                                        FontFeature.tabularFigures(),
+                                      ],
+                                      fontSize: 15,
+                                      fontWeight: selected
+                                          ? FontWeight.w700
+                                          : FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                        )
+                      : Text(
+                          _result.isEmpty ? 'Result will appear here' : _result,
+                          style: const TextStyle(fontSize: 16),
+                        ),
                 ),
               ),
               const SizedBox(height: 8),
-              if (_lastDistanceMeters != null) ...[
+              if (_lastDistanceMeters != null &&
+                  _mode != CalcMode.fieldhouse) ...[
                 const SizedBox(height: 8),
                 LayoutBuilder(
                   builder: (context, constraints) {

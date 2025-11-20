@@ -1,4 +1,4 @@
-enum CalcMode { pace, time, distance }
+enum CalcMode { pace, time, distance, fieldhouse }
 
 enum DistanceUnit { meters, kilometers, miles }
 
