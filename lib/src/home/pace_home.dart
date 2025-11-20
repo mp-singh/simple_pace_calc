@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'dart:ui' show FontFeature;
 import '../utils/conversions.dart';
 import '../utils/time_utils.dart';
 import '../utils/fieldhouse_utils.dart';
@@ -521,9 +522,7 @@ class _PaceHomePageState extends State<PaceHomePage> {
                                         fontWeight: selected
                                             ? FontWeight.w700
                                             : FontWeight.w500,
-                                        color: selected
-                                            ? theme.colorScheme.primary
-                                            : null,
+                                        color: theme.colorScheme.onSurface,
                                       ),
                                     ),
                                   ),
@@ -538,6 +537,7 @@ class _PaceHomePageState extends State<PaceHomePage> {
                                       fontWeight: selected
                                           ? FontWeight.w700
                                           : FontWeight.w500,
+                                      color: theme.colorScheme.onSurface,
                                     ),
                                   ),
                                 ],
