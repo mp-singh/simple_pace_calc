@@ -8,8 +8,17 @@ const Color _kAccent = Color(0xFF00C2D1); // soft cyan
 const Color _kLightBackground = Color(0xFFF7F9FB);
 const Color _kLightSurface = Color(0xFFFFFFFF);
 
-const Color _kDarkBackground = Color(0xFF020617);
-const Color _kDarkSurface = Color(0xFF0B1724);
+// legacy dark constants (replaced by softer variants below)
+
+// Softer dark theme variants (easier on the eyes)
+const Color _kDarkBackgroundSoft = Color(0xFF0B1B23); // soft charcoal
+const Color _kDarkSurfaceSoft = Color(0xFF12262B); // slightly lighter surface
+const Color _kDarkInputFill = Color(0xFF0F2329); // input fill for dark mode
+const Color _kDarkOnSurface = Color(0xB3FFFFFF); // ~70% white for text
+const Color _kDarkHint = Color(0x80FFFFFF); // ~50% white for hints
+const Color _kDarkAccent = Color(
+  0xFF089395,
+); // slightly muted cyan for dark buttons
 
 ThemeData lightTheme() {
   final colorScheme = ColorScheme.fromSeed(
@@ -77,21 +86,22 @@ ThemeData lightTheme() {
 ThemeData darkTheme() {
   final colorScheme = ColorScheme.dark(
     primary: _kPrimary,
-    onPrimary: Colors.white,
-    secondary: _kAccent,
-    surface: _kDarkSurface,
-    onSurface: Colors.white70,
+    onPrimary: _kDarkOnSurface,
+    secondary: _kDarkAccent,
+    surface: _kDarkSurfaceSoft,
+    background: _kDarkBackgroundSoft,
+    onSurface: _kDarkOnSurface,
     brightness: Brightness.dark,
   );
 
   return ThemeData(
     colorScheme: colorScheme,
     useMaterial3: true,
-    scaffoldBackgroundColor: _kDarkBackground,
-    cardColor: _kDarkSurface,
+    scaffoldBackgroundColor: _kDarkBackgroundSoft,
+    cardColor: _kDarkSurfaceSoft,
     appBarTheme: AppBarTheme(
-      backgroundColor: _kDarkSurface,
-      foregroundColor: Colors.white,
+      backgroundColor: _kDarkSurfaceSoft,
+      foregroundColor: _kDarkOnSurface,
       elevation: 0,
       iconTheme: const IconThemeData(color: _kAccent),
       titleTextStyle: const TextStyle(
@@ -102,7 +112,7 @@ ThemeData darkTheme() {
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        backgroundColor: _kAccent,
+        backgroundColor: _kDarkAccent,
         foregroundColor: Colors.black,
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -110,30 +120,30 @@ ThemeData darkTheme() {
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
-        foregroundColor: Colors.white70,
-        side: BorderSide(color: Colors.white10),
+        foregroundColor: _kDarkOnSurface,
+        side: const BorderSide(color: Color(0x22FFFFFF)),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: const Color(0xFF07121A),
+      fillColor: _kDarkInputFill,
       border: OutlineInputBorder(
         borderSide: BorderSide.none,
         borderRadius: BorderRadius.circular(12),
       ),
-      hintStyle: const TextStyle(color: Colors.white30),
+      hintStyle: const TextStyle(color: _kDarkHint),
       contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
     ),
     // cards use `cardColor` and default shape; keep visuals simple and consistent
     snackBarTheme: SnackBarThemeData(
-      backgroundColor: Colors.white10,
+      backgroundColor: const Color(0xFF122B30),
       contentTextStyle: const TextStyle(color: Colors.white),
       behavior: SnackBarBehavior.floating,
     ),
     textTheme: ThemeData.dark().textTheme.apply(
-      bodyColor: Colors.white,
-      displayColor: Colors.white,
+      bodyColor: _kDarkOnSurface,
+      displayColor: _kDarkOnSurface,
     ),
   );
 }
