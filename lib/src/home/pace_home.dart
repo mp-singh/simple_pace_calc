@@ -359,13 +359,6 @@ class _PaceHomePageState extends State<PaceHomePage> {
       }
     }
 
-    // clear track-related results when switching away
-    if (newMode != CalcMode.track) {
-      _fieldhouseResults.clear();
-      _lapsResult.clear();
-      _showMoreLanes = false;
-    }
-
     // If entering Track mode and no saved distance unit, default to kilometers
     if (newMode == CalcMode.track && !saved.containsKey('distanceUnit')) {
       _distanceUnit = DistanceUnit.kilometers;
@@ -378,6 +371,11 @@ class _PaceHomePageState extends State<PaceHomePage> {
       // only keep _lastDistanceMeters when returning to distance mode
       if (_mode != CalcMode.distance) _lastDistanceMeters = null;
     });
+
+    // Recalculate for Track mode to restore results based on saved inputs
+    // if (newMode == CalcMode.track) {
+    //   _calculate();
+    // }
   }
 
   @override

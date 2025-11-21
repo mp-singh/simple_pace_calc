@@ -135,6 +135,8 @@ class TrackResultDisplay extends StatelessWidget {
             },
           ),
         ],
+        if (fieldhouseResults.isNotEmpty && lapsResult.isNotEmpty)
+          const Divider(),
         if (lapsResult.isNotEmpty) ...[
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 6),
