@@ -7,10 +7,12 @@ import '../models/enums.dart';
 // labels util intentionally available if needed; keep for consistency
 // duration picker used by DurationInput
 import '../widgets/mode_selector.dart';
-import '../widgets/pace_unit_selector.dart';
-import '../widgets/distance_input.dart';
-import '../widgets/duration_input.dart';
-import '../widgets/fieldhouse_lane_selector.dart';
+// mode-specific inputs are provided by sub-widgets in `modes/`
+// mode sub-widgets
+import 'modes/pace_mode.dart';
+import 'modes/time_mode.dart';
+import 'modes/distance_mode.dart';
+import 'modes/track_mode.dart';
 
 class PaceHomePage extends StatefulWidget {
   const PaceHomePage({
@@ -353,6 +355,31 @@ class _PaceHomePageState extends State<PaceHomePage> {
     });
   }
 
+  void _clearAll() {
+    setState(() {
+      // Clear all form inputs
+      _timeController.clear();
+      _distanceController.clear();
+      _paceController.clear();
+      _fieldhouseCustomController.clear();
+
+      // Clear computed results and caches
+      _result = '';
+      _fieldhouseResults.clear();
+      _lapsResult.clear();
+      _lastDistanceMeters = null;
+      _showMoreLanes = false;
+
+      // Clear per-mode caches so switching back won't repopulate fields
+      for (final k in _modeCache.keys.toList()) {
+        _modeCache[k] = {};
+      }
+
+      // Reset custom lap toggle but keep current mode and lane selection
+      _useCustomLap = false;
+    });
+  }
+
   // moved label helpers to `lib/src/utils/labels.dart`
 
   Widget _buildConversionCard(
@@ -490,126 +517,94 @@ class _PaceHomePageState extends State<PaceHomePage> {
               ModeSelector(mode: _mode, onChanged: _switchMode),
               const SizedBox(height: 16),
 
-              // inputs (delegated to widget components)
-              if (_mode != CalcMode.time && _mode != CalcMode.track)
-                DurationInput(
-                  controller: _timeController,
-                  label: 'Time (hh:mm:ss or mm:ss)',
-                  hint: 'e.g. 00:04:46',
-                  validator: (v) {
+              // Mode-specific inputs moved to their own widgets for clarity
+              if (_mode == CalcMode.pace)
+                PaceModeWidget(
+                  timeController: _timeController,
+                  distanceController: _distanceController,
+                  distanceUnit: _distanceUnit,
+                  onDistanceUnitChanged: (u) =>
+                      setState(() => _distanceUnit = u),
+                  paceUnit: _paceUnit,
+                  onPaceUnitChanged: (p) => setState(() => _paceUnit = p),
+                  timeValidator: (v) {
                     if (v == null || v.trim().isEmpty) return 'Enter time';
                     if (parseTimeToSeconds(v) == null) return 'Invalid time';
                     return null;
                   },
-                ),
-              if (_mode == CalcMode.pace || _mode == CalcMode.track)
-                DurationInput(
-                  controller: _paceController,
-                  label: 'Pace (mm:ss)',
-                  hint: 'e.g. 05:00',
-                  validator: (v) {
-                    // In Track mode the pace input is optional — users may only
-                    // want laps (distance -> laps). If empty, allow validation
-                    // to pass. Otherwise validate as usual.
-                    if (_mode == CalcMode.track) {
-                      if (v == null || v.trim().isEmpty) return null;
-                    } else {
-                      if (v == null || v.trim().isEmpty) return 'Enter pace';
-                    }
-                    if (parseTimeToSeconds(v) == null) return 'Invalid pace';
-                    return null;
-                  },
-                ),
-              // place the pace unit selector directly under the pace input
-              if (_mode == CalcMode.pace || _mode == CalcMode.track)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8.0),
-                  child: PaceUnitSelector(
-                    paceUnit: _paceUnit,
-                    onChanged: (p) => setState(() => _paceUnit = p),
-                  ),
-                ),
-
-              if (_mode != CalcMode.distance && _mode != CalcMode.track)
-                DistanceInput(
-                  controller: _distanceController,
-                  unit: _distanceUnit,
-                  onUnitChanged: (u) => setState(() => _distanceUnit = u),
-                  validator: (v) {
+                  distanceValidator: (v) {
                     if (v == null || v.trim().isEmpty) return 'Enter distance';
                     final d = double.tryParse(v.replaceAll(',', ''));
                     if (d == null || d <= 0) return 'Invalid distance';
                     return null;
                   },
                 ),
-              if (_mode == CalcMode.track)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8.0),
-                  child: FieldhouseLaneSelector(
-                    lane: _fieldhouseLane,
-                    enabled: !_useCustomLap,
-                    onChanged: (l) => setState(() {
-                      _fieldhouseLane = l;
-                      _useCustomLap = false;
-                    }),
-                  ),
-                ),
-              if (_mode == CalcMode.track)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8.0),
-                  child: SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: const Text('Use custom lap length'),
-                    value: _useCustomLap,
-                    onChanged: (v) => setState(() => _useCustomLap = v),
-                  ),
-                ),
-              if (_mode == CalcMode.track)
-                Padding(
-                  padding: const EdgeInsets.only(top: 4.0),
-                  child: TextFormField(
-                    enabled: _useCustomLap,
-                    controller: _fieldhouseCustomController,
-                    decoration: InputDecoration(
-                      labelText: 'Custom lap length (m) — optional',
-                      hintText: 'e.g. 206.28',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        vertical: 12,
-                        horizontal: 12,
-                      ),
-                      filled: true,
-                      fillColor: Theme.of(
-                        context,
-                      ).inputDecorationTheme.fillColor,
-                    ),
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                    ),
-                    validator: (v) {
-                      if (!_useCustomLap) return null;
-                      if (v == null || v.trim().isEmpty) {
-                        return 'Enter lap length';
-                      }
-                      final d = double.tryParse(v.replaceAll(',', ''));
-                      if (d == null || d <= 0) return 'Invalid lap length';
-                      return null;
-                    },
-                  ),
+
+              if (_mode == CalcMode.time)
+                TimeModeWidget(
+                  paceController: _paceController,
+                  distanceController: _distanceController,
+                  distanceUnit: _distanceUnit,
+                  onDistanceUnitChanged: (u) =>
+                      setState(() => _distanceUnit = u),
+                  paceValidator: (v) {
+                    if (v == null || v.trim().isEmpty) return 'Enter pace';
+                    if (parseTimeToSeconds(v) == null) return 'Invalid pace';
+                    return null;
+                  },
+                  distanceValidator: (v) {
+                    if (v == null || v.trim().isEmpty) return 'Enter distance';
+                    final d = double.tryParse(v.replaceAll(',', ''));
+                    if (d == null || d <= 0) return 'Invalid distance';
+                    return null;
+                  },
+                  paceUnit: _paceUnit,
+                  onPaceUnitChanged: (p) => setState(() => _paceUnit = p),
                 ),
 
-              // For Track mode show a distance input (target distance to cover)
+              if (_mode == CalcMode.distance)
+                DistanceModeWidget(
+                  timeController: _timeController,
+                  paceController: _paceController,
+                  paceUnit: _paceUnit,
+                  onPaceUnitChanged: (p) => setState(() => _paceUnit = p),
+                  distanceValidator: (v) {
+                    // In Distance mode we don't show a distance input; keep
+                    // the validator signature available if needed.
+                    return null;
+                  },
+                  timeValidator: (v) {
+                    if (v == null || v.trim().isEmpty) return 'Enter time';
+                    if (parseTimeToSeconds(v) == null) return 'Invalid time';
+                    return null;
+                  },
+                ),
+
               if (_mode == CalcMode.track)
-                DistanceInput(
-                  controller: _distanceController,
-                  unit: _distanceUnit,
-                  onUnitChanged: (u) => setState(() => _distanceUnit = u),
-                  validator: (v) {
-                    // In Track mode the distance input is optional — users may
-                    // only want lap pace (pace + lap length). If empty, allow
-                    // validation to pass. If a value is provided, validate it.
+                TrackModeWidget(
+                  paceController: _paceController,
+                  paceValidator: (v) {
+                    // Track allows empty pace (laps-only)
+                    if (v == null || v.trim().isEmpty) return null;
+                    if (parseTimeToSeconds(v) == null) return 'Invalid pace';
+                    return null;
+                  },
+                  paceUnit: _paceUnit,
+                  onPaceUnitChanged: (p) => setState(() => _paceUnit = p),
+                  fieldhouseLane: _fieldhouseLane,
+                  useCustomLap: _useCustomLap,
+                  onFieldhouseLaneChanged: (l) => setState(() {
+                    _fieldhouseLane = l;
+                    _useCustomLap = false;
+                  }),
+                  onUseCustomLapChanged: (v) =>
+                      setState(() => _useCustomLap = v),
+                  fieldhouseCustomController: _fieldhouseCustomController,
+                  distanceController: _distanceController,
+                  distanceUnit: _distanceUnit,
+                  onDistanceUnitChanged: (u) =>
+                      setState(() => _distanceUnit = u),
+                  distanceValidator: (v) {
                     if (v == null || v.trim().isEmpty) return null;
                     final d = double.tryParse(v.replaceAll(',', ''));
                     if (d == null || d <= 0) return 'Invalid distance';
@@ -618,9 +613,20 @@ class _PaceHomePageState extends State<PaceHomePage> {
                 ),
 
               const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: _calculate,
-                child: const Text('Calculate'),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _calculate,
+                      child: const Text('Calculate'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  OutlinedButton(
+                    onPressed: _clearAll,
+                    child: const Text('Clear'),
+                  ),
+                ],
               ),
 
               const SizedBox(height: 20),
