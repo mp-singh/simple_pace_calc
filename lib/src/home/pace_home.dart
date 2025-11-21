@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../utils/conversions.dart';
 import '../utils/time_utils.dart';
 import '../utils/fieldhouse_utils.dart';
+import '../utils/validators.dart';
+import '../utils/calculations.dart';
+import '../utils/mode_cache.dart';
 import '../models/enums.dart';
 // labels util intentionally available if needed; keep for consistency
 // duration picker used by DurationInput
 import '../widgets/mode_selector.dart';
-// mode-specific inputs are provided by sub-widgets in `modes/`
-// mode sub-widgets
+import '../widgets/result_display.dart';
 import 'modes/pace_mode.dart';
 import 'modes/time_mode.dart';
 import 'modes/distance_mode.dart';
@@ -53,12 +54,7 @@ class _PaceHomePageState extends State<PaceHomePage> {
   // whether to show additional lanes (3..6) in the Track results
   bool _showMoreLanes = false;
   // cache inputs per mode so each mode remembers its own values
-  final Map<CalcMode, Map<String, String>> _modeCache = {
-    CalcMode.pace: {},
-    CalcMode.time: {},
-    CalcMode.distance: {},
-    CalcMode.track: {},
-  };
+  final ModeCache _modeCache = ModeCache();
 
   @override
   void dispose() {
@@ -81,98 +77,35 @@ class _PaceHomePageState extends State<PaceHomePage> {
       final paceText = _paceController.text.trim();
       final distanceText = _distanceController.text.trim();
 
-      final distanceVal = double.tryParse(distanceText.replaceAll(',', ''));
-
       if (_mode == CalcMode.pace) {
-        final totalSeconds = parseTimeToSeconds(timeText);
-        if (totalSeconds == null || distanceVal == null) {
-          _result = 'Enter valid time and distance';
-          return;
-        }
-        double unitDistance;
-        if (_paceUnit == PaceUnit.perKm) {
-          unitDistance = distanceToKilometers(distanceVal, _distanceUnit);
-        } else {
-          unitDistance = distanceToMiles(distanceVal, _distanceUnit);
-        }
-        if (unitDistance <= 0) {
-          _result = 'Distance must be > 0';
-          return;
-        }
-        final paceSec = (totalSeconds / unitDistance).round();
-        final unitLabel = _paceUnit == PaceUnit.perKm ? 'per km' : 'per mile';
-        _result = 'Pace: ${formatSeconds(paceSec)} $unitLabel';
+        _result = calculatePace(
+          timeText: timeText,
+          distanceText: distanceText,
+          distanceUnit: _distanceUnit,
+          paceUnit: _paceUnit,
+        );
         return;
       }
 
       if (_mode == CalcMode.time) {
-        final paceSec = parseTimeToSeconds(paceText);
-        if (paceSec == null || distanceVal == null) {
-          _result = 'Enter valid pace and distance';
-          return;
-        }
-        double unitDistance;
-        if (_paceUnit == PaceUnit.perKm) {
-          unitDistance = distanceToKilometers(distanceVal, _distanceUnit);
-        } else {
-          unitDistance = distanceToMiles(distanceVal, _distanceUnit);
-        }
-        if (unitDistance <= 0) {
-          _result = 'Distance must be > 0';
-          return;
-        }
-        final totalSec = (paceSec * unitDistance).round();
-        _result = 'Time: ${formatSeconds(totalSec)}';
+        _result = calculateTime(
+          paceText: paceText,
+          distanceText: distanceText,
+          distanceUnit: _distanceUnit,
+          paceUnit: _paceUnit,
+        );
         return;
       }
 
       if (_mode == CalcMode.distance) {
-        final totalSec = parseTimeToSeconds(timeText);
-        final paceSec = parseTimeToSeconds(paceText);
-        if (totalSec == null || paceSec == null) {
-          _result = 'Enter valid time and pace';
-          return;
-        }
-        final distInUnits = totalSec / paceSec;
-        String out;
-        if (_paceUnit == PaceUnit.perKm) {
-          double outValue;
-          switch (_distanceUnit) {
-            case DistanceUnit.meters:
-              outValue = distInUnits * 1000.0;
-              out = '${outValue.toStringAsFixed(2)} m';
-              break;
-            case DistanceUnit.kilometers:
-              outValue = distInUnits;
-              out = '${outValue.toStringAsFixed(3)} km';
-              break;
-            case DistanceUnit.miles:
-              outValue = distInUnits / 1.609344;
-              out = '${outValue.toStringAsFixed(3)} mi';
-              break;
-          }
-          // distInUnits is kilometers here -> store meters
-          _lastDistanceMeters = distInUnits * 1000.0;
-        } else {
-          double outValue;
-          switch (_distanceUnit) {
-            case DistanceUnit.meters:
-              outValue = distInUnits * 1609.344;
-              out = '${outValue.toStringAsFixed(2)} m';
-              break;
-            case DistanceUnit.kilometers:
-              outValue = distInUnits * 1.609344;
-              out = '${outValue.toStringAsFixed(3)} km';
-              break;
-            case DistanceUnit.miles:
-              outValue = distInUnits;
-              out = '${outValue.toStringAsFixed(3)} mi';
-              break;
-          }
-          // distInUnits is miles here -> store meters
-          _lastDistanceMeters = distInUnits * 1609.344;
-        }
-        _result = 'Distance: $out';
+        final (result, lastDist) = calculateDistance(
+          timeText: timeText,
+          paceText: paceText,
+          distanceUnit: _distanceUnit,
+          paceUnit: _paceUnit,
+        );
+        _result = result;
+        _lastDistanceMeters = lastDist;
         return;
       }
       if (_mode == CalcMode.track) {
@@ -371,9 +304,7 @@ class _PaceHomePageState extends State<PaceHomePage> {
       _showMoreLanes = false;
 
       // Clear per-mode caches so switching back won't repopulate fields
-      for (final k in _modeCache.keys.toList()) {
-        _modeCache[k] = {};
-      }
+      _modeCache.clearAll();
 
       // Reset custom lap toggle but keep current mode and lane selection
       _useCustomLap = false;
@@ -431,7 +362,7 @@ class _PaceHomePageState extends State<PaceHomePage> {
   void _switchMode(CalcMode newMode) {
     if (newMode == _mode) return;
     // save current inputs for the existing mode
-    _modeCache[_mode] = {
+    _modeCache.save(_mode, {
       'time': _timeController.text,
       'pace': _paceController.text,
       'distance': _distanceController.text,
@@ -440,10 +371,10 @@ class _PaceHomePageState extends State<PaceHomePage> {
       'fieldhouseUseCustom': _useCustomLap.toString(),
       'distanceUnit': _distanceUnit.index.toString(),
       'paceUnit': _paceUnit.index.toString(),
-    };
+    });
 
     // restore inputs for the new mode (if any)
-    final saved = _modeCache[newMode] ?? {};
+    final saved = _modeCache.load(newMode);
     _timeController.text = saved['time'] ?? '';
     _paceController.text = saved['pace'] ?? '';
     _distanceController.text = saved['distance'] ?? '';
@@ -527,17 +458,8 @@ class _PaceHomePageState extends State<PaceHomePage> {
                       setState(() => _distanceUnit = u),
                   paceUnit: _paceUnit,
                   onPaceUnitChanged: (p) => setState(() => _paceUnit = p),
-                  timeValidator: (v) {
-                    if (v == null || v.trim().isEmpty) return 'Enter time';
-                    if (parseTimeToSeconds(v) == null) return 'Invalid time';
-                    return null;
-                  },
-                  distanceValidator: (v) {
-                    if (v == null || v.trim().isEmpty) return 'Enter distance';
-                    final d = double.tryParse(v.replaceAll(',', ''));
-                    if (d == null || d <= 0) return 'Invalid distance';
-                    return null;
-                  },
+                  timeValidator: validateTime,
+                  distanceValidator: validateDistance,
                 ),
 
               if (_mode == CalcMode.time)
@@ -547,17 +469,8 @@ class _PaceHomePageState extends State<PaceHomePage> {
                   distanceUnit: _distanceUnit,
                   onDistanceUnitChanged: (u) =>
                       setState(() => _distanceUnit = u),
-                  paceValidator: (v) {
-                    if (v == null || v.trim().isEmpty) return 'Enter pace';
-                    if (parseTimeToSeconds(v) == null) return 'Invalid pace';
-                    return null;
-                  },
-                  distanceValidator: (v) {
-                    if (v == null || v.trim().isEmpty) return 'Enter distance';
-                    final d = double.tryParse(v.replaceAll(',', ''));
-                    if (d == null || d <= 0) return 'Invalid distance';
-                    return null;
-                  },
+                  paceValidator: validatePace,
+                  distanceValidator: validateDistance,
                   paceUnit: _paceUnit,
                   onPaceUnitChanged: (p) => setState(() => _paceUnit = p),
                 ),
@@ -568,27 +481,12 @@ class _PaceHomePageState extends State<PaceHomePage> {
                   paceController: _paceController,
                   paceUnit: _paceUnit,
                   onPaceUnitChanged: (p) => setState(() => _paceUnit = p),
-                  distanceValidator: (v) {
-                    // In Distance mode we don't show a distance input; keep
-                    // the validator signature available if needed.
-                    return null;
-                  },
-                  timeValidator: (v) {
-                    if (v == null || v.trim().isEmpty) return 'Enter time';
-                    if (parseTimeToSeconds(v) == null) return 'Invalid time';
-                    return null;
-                  },
                 ),
 
               if (_mode == CalcMode.track)
                 TrackModeWidget(
                   paceController: _paceController,
-                  paceValidator: (v) {
-                    // Track allows empty pace (laps-only)
-                    if (v == null || v.trim().isEmpty) return null;
-                    if (parseTimeToSeconds(v) == null) return 'Invalid pace';
-                    return null;
-                  },
+                  paceValidator: validatePaceOptional,
                   paceUnit: _paceUnit,
                   onPaceUnitChanged: (p) => setState(() => _paceUnit = p),
                   fieldhouseLane: _fieldhouseLane,
@@ -604,12 +502,7 @@ class _PaceHomePageState extends State<PaceHomePage> {
                   distanceUnit: _distanceUnit,
                   onDistanceUnitChanged: (u) =>
                       setState(() => _distanceUnit = u),
-                  distanceValidator: (v) {
-                    if (v == null || v.trim().isEmpty) return null;
-                    final d = double.tryParse(v.replaceAll(',', ''));
-                    if (d == null || d <= 0) return 'Invalid distance';
-                    return null;
-                  },
+                  distanceValidator: validateDistanceOptional,
                 ),
 
               const SizedBox(height: 16),
@@ -635,264 +528,15 @@ class _PaceHomePageState extends State<PaceHomePage> {
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: _mode == CalcMode.track
-                      ? Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            if (_fieldhouseResults.isNotEmpty) ...[
-                              // Show only the primary (selected/custom) lane row first.
-                              Builder(
-                                builder: (context) {
-                                  final theme = Theme.of(context);
-                                  final primary = _fieldhouseResults.first;
-                                  final primaryLaneStr = primary['lane'];
-                                  final primaryLabel = primary['label'] ?? '';
-                                  final primaryMeters = primary['meters'] ?? '';
-                                  final primaryPace = primary['pace'] ?? '';
-                                  final primarySelected =
-                                      !_useCustomLap &&
-                                      primaryLaneStr != null &&
-                                      int.tryParse(primaryLaneStr) ==
-                                          _fieldhouseLane;
-
-                                  Widget primaryRow = Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 6,
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Expanded(
-                                          child: Text(
-                                            '$primaryLabel — $primaryMeters m',
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              fontWeight: primarySelected
-                                                  ? FontWeight.w700
-                                                  : FontWeight.w500,
-                                              color:
-                                                  theme.colorScheme.onSurface,
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 12),
-                                        Text(
-                                          primaryPace,
-                                          style: TextStyle(
-                                            fontFeatures: const [
-                                              FontFeature.tabularFigures(),
-                                            ],
-                                            fontSize: 15,
-                                            fontWeight: primarySelected
-                                                ? FontWeight.w700
-                                                : FontWeight.w500,
-                                            color: theme.colorScheme.onSurface,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-
-                                  // Build secondary rows (lanes 3..6)
-                                  final secondary = _fieldhouseResults
-                                      .skip(1)
-                                      .map((r) {
-                                        final laneStr = r['lane'];
-                                        final label = r['label'] ?? '';
-                                        final meters = r['meters'] ?? '';
-                                        final pace = r['pace'] ?? '';
-                                        final sel =
-                                            !_useCustomLap &&
-                                            laneStr != null &&
-                                            int.tryParse(laneStr) ==
-                                                _fieldhouseLane;
-                                        return Padding(
-                                          padding: const EdgeInsets.symmetric(
-                                            vertical: 6,
-                                          ),
-                                          child: Row(
-                                            children: [
-                                              Expanded(
-                                                child: Text(
-                                                  '$label — $meters m',
-                                                  style: TextStyle(
-                                                    fontSize: 15,
-                                                    fontWeight: sel
-                                                        ? FontWeight.w700
-                                                        : FontWeight.w500,
-                                                    color: theme
-                                                        .colorScheme
-                                                        .onSurface,
-                                                  ),
-                                                ),
-                                              ),
-                                              const SizedBox(width: 12),
-                                              Text(
-                                                pace,
-                                                style: TextStyle(
-                                                  fontFeatures: const [
-                                                    FontFeature.tabularFigures(),
-                                                  ],
-                                                  fontSize: 15,
-                                                  fontWeight: sel
-                                                      ? FontWeight.w700
-                                                      : FontWeight.w500,
-                                                  color: theme
-                                                      .colorScheme
-                                                      .onSurface,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        );
-                                      })
-                                      .toList();
-
-                                  return Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.stretch,
-                                    children: [
-                                      primaryRow,
-                                      if (_fieldhouseResults.length > 1)
-                                        Align(
-                                          alignment: Alignment.centerLeft,
-                                          child: TextButton.icon(
-                                            onPressed: () => setState(() {
-                                              _showMoreLanes = !_showMoreLanes;
-                                            }),
-                                            icon: Icon(
-                                              _showMoreLanes
-                                                  ? Icons.expand_less
-                                                  : Icons.expand_more,
-                                              size: 18,
-                                            ),
-                                            label: Text(
-                                              _showMoreLanes
-                                                  ? 'Show fewer lanes'
-                                                  : 'Show more lanes',
-                                            ),
-                                          ),
-                                        ),
-                                      if (_showMoreLanes) ...secondary,
-                                    ],
-                                  );
-                                },
-                              ),
-                            ],
-                            if (_lapsResult.isNotEmpty) ...[
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 6,
-                                ),
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        'Laps',
-                                        style: TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w600,
-                                          color: Theme.of(
-                                            context,
-                                          ).colorScheme.onSurface,
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Text(
-                                      _lapsResult['exact'] ?? '',
-                                      style: TextStyle(
-                                        fontFeatures: const [
-                                          FontFeature.tabularFigures(),
-                                        ],
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w600,
-                                        color: Theme.of(
-                                          context,
-                                        ).colorScheme.onSurface,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 6,
-                                ),
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        'Rounded Up Laps',
-                                        style: TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w600,
-                                          color: Theme.of(
-                                            context,
-                                          ).colorScheme.onSurface,
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Text(
-                                      '${_lapsResult['roundsUp']}',
-                                      style: TextStyle(
-                                        fontFeatures: const [
-                                          FontFeature.tabularFigures(),
-                                        ],
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w600,
-                                        color: Theme.of(
-                                          context,
-                                        ).colorScheme.onSurface,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 6,
-                                ),
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        'Total distance',
-                                        style: TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w600,
-                                          color: Theme.of(
-                                            context,
-                                          ).colorScheme.onSurface,
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Text(
-                                      '${_lapsResult['roundsUpMeters']} m',
-                                      style: TextStyle(
-                                        fontFeatures: const [
-                                          FontFeature.tabularFigures(),
-                                        ],
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w600,
-                                        color: Theme.of(
-                                          context,
-                                        ).colorScheme.onSurface,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                            if (_fieldhouseResults.isEmpty &&
-                                _lapsResult.isEmpty)
-                              Text(
-                                _result.isEmpty
-                                    ? 'Result will appear here'
-                                    : _result,
-                                style: const TextStyle(fontSize: 16),
-                              ),
-                          ],
+                      ? TrackResultDisplay(
+                          fieldhouseResults: _fieldhouseResults,
+                          lapsResult: _lapsResult,
+                          showMoreLanes: _showMoreLanes,
+                          onToggleShowMoreLanes: () => setState(() {
+                            _showMoreLanes = !_showMoreLanes;
+                          }),
+                          useCustomLap: _useCustomLap,
+                          fieldhouseLane: _fieldhouseLane,
                         )
                       : Text(
                           _result.isEmpty ? 'Result will appear here' : _result,

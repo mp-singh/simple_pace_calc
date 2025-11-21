@@ -45,13 +45,7 @@ class TimeModeWidget extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         // pace unit selector is useful here too
-        Padding(
-          padding: const EdgeInsets.only(top: 4.0),
-          child: PaceUnitSelector(
-            paceUnit: paceUnit,
-            onChanged: onPaceUnitChanged,
-          ),
-        ),
+        PaceUnitSelector(paceUnit: paceUnit, onChanged: onPaceUnitChanged),
       ],
     );
   }
