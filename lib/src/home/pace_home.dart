@@ -30,7 +30,7 @@ class PaceHomePage extends StatefulWidget {
 
 class _PaceHomePageState extends State<PaceHomePage> {
   CalcMode _mode = CalcMode.track;
-  DistanceUnit _distanceUnit = DistanceUnit.meters;
+  DistanceUnit _distanceUnit = DistanceUnit.kilometers;
   PaceUnit _paceUnit = PaceUnit.perKm;
   // Fieldhouse specific
   int _fieldhouseLane = 1;
@@ -177,19 +177,12 @@ class _PaceHomePageState extends State<PaceHomePage> {
               _lastDistanceMeters = lapMeters;
             }
           } else {
-            // Non-custom: show selected lane first plus lanes 3..6
-            final List<int> lanes = [];
-            final seen = <int>{};
-            if (_fieldhouseLane >= 1 && _fieldhouseLane <= 6) {
-              lanes.add(_fieldhouseLane);
-              seen.add(_fieldhouseLane);
-            }
-            for (var l = 3; l <= 6; l++) {
-              if (!seen.contains(l)) {
-                lanes.add(l);
-                seen.add(l);
-              }
-            }
+            // Non-custom: show all lanes with selected first
+            final List<int> allLanes = [1, 2, 3, 4, 5, 6];
+            final List<int> lanes = [
+              _fieldhouseLane,
+              ...allLanes.where((l) => l != _fieldhouseLane),
+            ];
 
             final List<Map<String, String>> results = [];
             double? firstLapMeters;
@@ -330,9 +323,13 @@ class _PaceHomePageState extends State<PaceHomePage> {
 
     // restore inputs for the new mode (if any)
     final saved = _modeCache.load(newMode);
+    // Clear any lingering validation errors when switching modes so hidden
+    // fields do not keep showing errors after a mode change.
+    _formKey.currentState?.reset();
     _timeController.text = saved['time'] ?? '';
     _paceController.text = saved['pace'] ?? '';
-    _distanceController.text = saved['distance'] ?? '';
+    _distanceController.text =
+        saved['distance'] ?? ''; // Will be '' since not saved
     if (saved.containsKey('fieldhouseLane')) {
       final idx = int.tryParse(saved['fieldhouseLane']!);
       if (idx != null && idx >= 1 && idx <= 6) {
@@ -343,9 +340,6 @@ class _PaceHomePageState extends State<PaceHomePage> {
     if (saved.containsKey('fieldhouseUseCustom')) {
       _useCustomLap = saved['fieldhouseUseCustom'] == 'true';
     }
-    // Clear any lingering validation errors when switching modes so hidden
-    // fields do not keep showing errors after a mode change.
-    _formKey.currentState?.reset();
     if (saved.containsKey('distanceUnit')) {
       final idx = int.tryParse(saved['distanceUnit']!);
       if (idx != null && idx >= 0 && idx < DistanceUnit.values.length) {
@@ -490,6 +484,10 @@ class _PaceHomePageState extends State<PaceHomePage> {
                           }),
                           useCustomLap: _useCustomLap,
                           fieldhouseLane: _fieldhouseLane,
+                          onLaneSelected: (int lane) {
+                            setState(() => _fieldhouseLane = lane);
+                            _calculate();
+                          },
                         )
                       : _mode == CalcMode.distance
                       ? Column(

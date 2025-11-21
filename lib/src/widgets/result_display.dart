@@ -11,6 +11,7 @@ class TrackResultDisplay extends StatelessWidget {
     required this.onToggleShowMoreLanes,
     required this.useCustomLap,
     required this.fieldhouseLane,
+    required this.onLaneSelected,
   });
 
   final List<Map<String, String>> fieldhouseResults;
@@ -19,6 +20,7 @@ class TrackResultDisplay extends StatelessWidget {
   final VoidCallback onToggleShowMoreLanes;
   final bool useCustomLap;
   final int fieldhouseLane;
+  final ValueChanged<int> onLaneSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -39,14 +41,31 @@ class TrackResultDisplay extends StatelessWidget {
                   primaryLaneStr != null &&
                   int.tryParse(primaryLaneStr) == fieldhouseLane;
 
-              Widget primaryRow = Padding(
-                padding: const EdgeInsets.symmetric(vertical: 6),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        '$primaryLabel — $primaryMeters m',
+              Widget primaryRow = InkWell(
+                onTap: primaryLaneStr != null && primaryLaneStr != 'custom'
+                    ? () => onLaneSelected(int.parse(primaryLaneStr))
+                    : null,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          '$primaryLabel — $primaryMeters m',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: primarySelected
+                                ? FontWeight.w700
+                                : FontWeight.w500,
+                            color: theme.colorScheme.onSurface,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        primaryPace,
                         style: TextStyle(
+                          fontFeatures: const [FontFeature.tabularFigures()],
                           fontSize: 15,
                           fontWeight: primarySelected
                               ? FontWeight.w700
@@ -54,23 +73,10 @@ class TrackResultDisplay extends StatelessWidget {
                           color: theme.colorScheme.onSurface,
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      primaryPace,
-                      style: TextStyle(
-                        fontFeatures: const [FontFeature.tabularFigures()],
-                        fontSize: 15,
-                        fontWeight: primarySelected
-                            ? FontWeight.w700
-                            : FontWeight.w500,
-                        color: theme.colorScheme.onSurface,
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               );
-
               final secondary = fieldhouseResults.skip(1).map((r) {
                 final laneStr = r['lane'];
                 final label = r['label'] ?? '';
@@ -80,31 +86,38 @@ class TrackResultDisplay extends StatelessWidget {
                     !useCustomLap &&
                     laneStr != null &&
                     int.tryParse(laneStr) == fieldhouseLane;
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          '$label — $meters m',
+                return InkWell(
+                  onTap: laneStr != null && laneStr != 'custom'
+                      ? () => onLaneSelected(int.parse(laneStr))
+                      : null,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            '$label — $meters m',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: sel
+                                  ? FontWeight.w700
+                                  : FontWeight.w500,
+                              color: theme.colorScheme.onSurface,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          pace,
                           style: TextStyle(
+                            fontFeatures: const [FontFeature.tabularFigures()],
                             fontSize: 15,
                             fontWeight: sel ? FontWeight.w700 : FontWeight.w500,
                             color: theme.colorScheme.onSurface,
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        pace,
-                        style: TextStyle(
-                          fontFeatures: const [FontFeature.tabularFigures()],
-                          fontSize: 15,
-                          fontWeight: sel ? FontWeight.w700 : FontWeight.w500,
-                          color: theme.colorScheme.onSurface,
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 );
               }).toList();
@@ -116,16 +129,14 @@ class TrackResultDisplay extends StatelessWidget {
                   if (fieldhouseResults.length > 1)
                     Align(
                       alignment: Alignment.centerLeft,
-                      child: TextButton.icon(
+                      child: OutlinedButton.icon(
                         onPressed: onToggleShowMoreLanes,
                         icon: Icon(
                           showMoreLanes ? Icons.expand_less : Icons.expand_more,
                           size: 18,
                         ),
                         label: Text(
-                          showMoreLanes
-                              ? 'Show fewer lanes'
-                              : 'Show more lanes',
+                          showMoreLanes ? 'Show fewer lanes' : 'Show all lanes',
                         ),
                       ),
                     ),
