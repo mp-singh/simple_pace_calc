@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import '../utils/time_utils.dart';
 import '../utils/fieldhouse_utils.dart';
 import '../utils/validators.dart';
@@ -313,50 +312,6 @@ class _PaceHomePageState extends State<PaceHomePage> {
 
   // moved label helpers to `lib/src/utils/labels.dart`
 
-  Widget _buildConversionCard(
-    BuildContext context,
-    String label,
-    String value,
-  ) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(label, style: Theme.of(context).textTheme.bodySmall),
-            const SizedBox(height: 6),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Expanded(
-                  child: Text(
-                    value,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                IconButton(
-                  tooltip: 'Copy',
-                  icon: const Icon(Icons.copy, size: 18),
-                  onPressed: () {
-                    Clipboard.setData(ClipboardData(text: value));
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Copied to clipboard')),
-                    );
-                  },
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   // Mode selector is provided by `ModeSelector` widget.
 
   void _switchMode(CalcMode newMode) {
@@ -538,59 +493,128 @@ class _PaceHomePageState extends State<PaceHomePage> {
                           useCustomLap: _useCustomLap,
                           fieldhouseLane: _fieldhouseLane,
                         )
+                      : _mode == CalcMode.distance
+                      ? Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 6),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      'Distance',
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w600,
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onSurface,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Text(
+                                    _result.isEmpty
+                                        ? ''
+                                        : _result.replaceFirst(
+                                            'Distance: ',
+                                            '',
+                                          ),
+                                    style: TextStyle(
+                                      fontFeatures: const [
+                                        FontFeature.tabularFigures(),
+                                      ],
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSurface,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (_lastDistanceMeters != null) ...[
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 6,
+                                ),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        'Equivalent kilometers',
+                                        style: TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w500,
+                                          color: Theme.of(
+                                            context,
+                                          ).colorScheme.onSurface,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Text(
+                                      '${(_lastDistanceMeters! / 1000.0).toStringAsFixed(3)} km',
+                                      style: TextStyle(
+                                        fontFeatures: const [
+                                          FontFeature.tabularFigures(),
+                                        ],
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w500,
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onSurface,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 6,
+                                ),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        'Equivalent miles',
+                                        style: TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w500,
+                                          color: Theme.of(
+                                            context,
+                                          ).colorScheme.onSurface,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Text(
+                                      '${(_lastDistanceMeters! / 1609.344).toStringAsFixed(3)} mi',
+                                      style: TextStyle(
+                                        fontFeatures: const [
+                                          FontFeature.tabularFigures(),
+                                        ],
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w500,
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onSurface,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ],
+                        )
                       : Text(
                           _result.isEmpty ? 'Result will appear here' : _result,
                           style: const TextStyle(fontSize: 16),
                         ),
                 ),
               ),
-              const SizedBox(height: 8),
-              if (_lastDistanceMeters != null && _mode != CalcMode.track) ...[
-                const SizedBox(height: 8),
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    // calculate a reasonable card width based on available space
-                    final available = constraints.maxWidth;
-                    // when wide, show three cards in a row; otherwise allow wrapping
-                    final cardWidth = available > 560
-                        ? (available - 16) / 3
-                        : (available * 0.9);
-
-                    return Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        SizedBox(
-                          width: cardWidth,
-                          child: _buildConversionCard(
-                            context,
-                            'Meters',
-                            _lastDistanceMeters!.toStringAsFixed(2),
-                          ),
-                        ),
-                        SizedBox(
-                          width: cardWidth,
-                          child: _buildConversionCard(
-                            context,
-                            'Kilometers',
-                            (_lastDistanceMeters! / 1000.0).toStringAsFixed(3),
-                          ),
-                        ),
-                        SizedBox(
-                          width: cardWidth,
-                          child: _buildConversionCard(
-                            context,
-                            'Miles',
-                            (_lastDistanceMeters! / 1609.344).toStringAsFixed(
-                              3,
-                            ),
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
-              ],
               const SizedBox(height: 8),
               const Text(
                 'Notes: Input formats: time and pace use mm:ss or hh:mm:ss. Distance accepts decimal.',
