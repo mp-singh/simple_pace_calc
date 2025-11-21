@@ -52,8 +52,8 @@ class ModeSelector extends StatelessWidget {
         runSpacing: 6,
         alignment: WrapAlignment.center,
         children: [
-          // Fieldhouse first per request
-          chip('Fieldhouse', CalcMode.fieldhouse),
+          // Track (merged Fieldhouse + Laps) first per request
+          chip('Track', CalcMode.track),
           chip('Pace', CalcMode.pace),
           chip('Time', CalcMode.time),
           chip('Distance', CalcMode.distance),
