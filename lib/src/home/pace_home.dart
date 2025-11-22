@@ -68,7 +68,10 @@ class _PaceHomePageState extends State<PaceHomePage> {
     setState(() {
       _result = '';
       if (!_formKey.currentState!.validate()) {
-        _result = 'Fix input errors';
+        // Clear results when validation fails
+        _fieldhouseResults.clear();
+        _lapsResult.clear();
+        _lastDistanceMeters = null;
         return;
       }
 
@@ -118,21 +121,14 @@ class _PaceHomePageState extends State<PaceHomePage> {
         if (_useCustomLap) {
           final custom = _fieldhouseCustomController.text.trim();
           if (custom.isEmpty) {
-            // If neither pace nor distance present, defer validation to later
-            if (paceSec == null && (parsedDist == null || parsedDist <= 0)) {
-              _result = 'Enter a pace or a distance to calculate';
-              _fieldhouseResults.clear();
-              _lapsResult.clear();
-              return;
-            }
-            _result = 'Enter custom lap length or disable custom';
+            // Validation will handle this
             _fieldhouseResults.clear();
             _lapsResult.clear();
             return;
           }
           final parsed = double.tryParse(custom.replaceAll(',', ''));
           if (parsed == null || parsed <= 0) {
-            _result = 'Invalid custom lap length';
+            // Validation will handle this
             _fieldhouseResults.clear();
             _lapsResult.clear();
             return;
@@ -145,7 +141,7 @@ class _PaceHomePageState extends State<PaceHomePage> {
               laneMap: defaultLaneLapMeters,
             );
           } catch (e) {
-            _result = 'Invalid lane';
+            // This shouldn't happen with valid lane
             _fieldhouseResults.clear();
             _lapsResult.clear();
             return;
@@ -267,9 +263,10 @@ class _PaceHomePageState extends State<PaceHomePage> {
         }
 
         if (paceSec == null && (parsedDist == null || parsedDist <= 0)) {
-          _result = 'Enter a pace or a distance to calculate';
+          // Validation will handle this
           _fieldhouseResults.clear();
           _lapsResult.clear();
+          _result = 'Enter a pace or distance to calculate';
           return;
         }
 
@@ -301,6 +298,19 @@ class _PaceHomePageState extends State<PaceHomePage> {
       // Reset custom lap toggle but keep current mode and lane selection
       _useCustomLap = false;
     });
+  }
+
+  String? _validateCustomLap(String? value) {
+    if (_useCustomLap) {
+      if (value == null || value.trim().isEmpty) {
+        return 'Custom lap length is required';
+      }
+      final parsed = double.tryParse(value.replaceAll(',', ''));
+      if (parsed == null || parsed <= 0) {
+        return 'Invalid custom lap length';
+      }
+    }
+    return null;
   }
 
   // moved label helpers to `lib/src/utils/labels.dart`
@@ -442,14 +452,20 @@ class _PaceHomePageState extends State<PaceHomePage> {
                     _fieldhouseLane = l;
                     _useCustomLap = false;
                   }),
-                  onUseCustomLapChanged: (v) =>
-                      setState(() => _useCustomLap = v),
+                  onUseCustomLapChanged: (v) => setState(() {
+                    _useCustomLap = v;
+                    if (!v) {
+                      _fieldhouseCustomController.clear();
+                      _formKey.currentState?.validate();
+                    }
+                  }),
                   fieldhouseCustomController: _fieldhouseCustomController,
                   distanceController: _distanceController,
                   distanceUnit: _distanceUnit,
                   onDistanceUnitChanged: (u) =>
                       setState(() => _distanceUnit = u),
                   distanceValidator: validateDistanceOptional,
+                  customLapValidator: _validateCustomLap,
                 ),
 
               const SizedBox(height: 16),

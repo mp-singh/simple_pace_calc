@@ -21,6 +21,7 @@ class TrackModeWidget extends StatelessWidget {
     required this.distanceUnit,
     required this.onDistanceUnitChanged,
     required this.distanceValidator,
+    required this.customLapValidator,
   });
 
   final TextEditingController paceController;
@@ -36,6 +37,7 @@ class TrackModeWidget extends StatelessWidget {
   final DistanceUnit distanceUnit;
   final ValueChanged<DistanceUnit> onDistanceUnitChanged;
   final String? Function(String?) distanceValidator;
+  final String? Function(String?) customLapValidator;
 
   @override
   Widget build(BuildContext context) {
@@ -71,7 +73,7 @@ class TrackModeWidget extends StatelessWidget {
           enabled: useCustomLap,
           controller: fieldhouseCustomController,
           decoration: InputDecoration(
-            labelText: 'Custom lap length (m) — optional',
+            labelText: 'Custom lap length (m)',
             hintText: 'e.g. 206.28',
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             contentPadding: const EdgeInsets.symmetric(
@@ -81,6 +83,7 @@ class TrackModeWidget extends StatelessWidget {
             filled: true,
             fillColor: Theme.of(context).inputDecorationTheme.fillColor,
           ),
+          validator: customLapValidator,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
         ),
         const SizedBox(height: 8),

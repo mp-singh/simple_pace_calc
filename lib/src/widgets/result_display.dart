@@ -235,8 +235,17 @@ class TrackResultDisplay extends StatelessWidget {
         ],
         if (fieldhouseResults.isEmpty && lapsResult.isEmpty)
           errorMessage.isNotEmpty
-              ? Text(errorMessage, style: const TextStyle(fontSize: 16))
-              : const Text('Result will appear here', style: TextStyle(fontSize: 16)),
+              ? Text(
+                  errorMessage,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+                )
+              : const Text(
+                  'Result will appear here',
+                  style: TextStyle(fontSize: 16),
+                ),
       ],
     );
   }
