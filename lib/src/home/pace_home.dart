@@ -488,6 +488,7 @@ class _PaceHomePageState extends State<PaceHomePage> {
                             setState(() => _fieldhouseLane = lane);
                             _calculate();
                           },
+                          errorMessage: _result,
                         )
                       : _mode == CalcMode.distance
                       ? Column(

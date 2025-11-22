@@ -1,8 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'src/app_theme.dart';
 import 'src/home/pace_home.dart';
 
-void main() => runApp(const PaceCalculatorApp());
+void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  if (kDebugMode) {
+    // Disable debug features for better performance in debug mode
+    debugPrintRebuildDirtyWidgets = false;
+    debugPrintBuildScope = false;
+    debugPrintScheduleBuildForStacks = false;
+  }
+  runApp(const PaceCalculatorApp());
+}
 
 class PaceCalculatorApp extends StatefulWidget {
   const PaceCalculatorApp({super.key});

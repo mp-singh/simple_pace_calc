@@ -12,6 +12,7 @@ class TrackResultDisplay extends StatelessWidget {
     required this.useCustomLap,
     required this.fieldhouseLane,
     required this.onLaneSelected,
+    required this.errorMessage,
   });
 
   final List<Map<String, String>> fieldhouseResults;
@@ -21,6 +22,7 @@ class TrackResultDisplay extends StatelessWidget {
   final bool useCustomLap;
   final int fieldhouseLane;
   final ValueChanged<int> onLaneSelected;
+  final String errorMessage;
 
   @override
   Widget build(BuildContext context) {
@@ -232,7 +234,9 @@ class TrackResultDisplay extends StatelessWidget {
           ),
         ],
         if (fieldhouseResults.isEmpty && lapsResult.isEmpty)
-          const Text('Result will appear here', style: TextStyle(fontSize: 16)),
+          errorMessage.isNotEmpty
+              ? Text(errorMessage, style: const TextStyle(fontSize: 16))
+              : const Text('Result will appear here', style: TextStyle(fontSize: 16)),
       ],
     );
   }
