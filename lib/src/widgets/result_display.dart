@@ -30,6 +30,28 @@ class TrackResultDisplay extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (fieldhouseResults.isNotEmpty) ...[
+          // Lane Paces Section Header
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.directions_run,
+                  size: 20,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Lane Paces',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
+              ],
+            ),
+          ),
           Builder(
             builder: (context) {
               final theme = Theme.of(context);
@@ -48,7 +70,7 @@ class TrackResultDisplay extends StatelessWidget {
                     ? () => onLaneSelected(int.parse(primaryLaneStr))
                     : null,
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  padding: const EdgeInsets.symmetric(vertical: 8),
                   child: Row(
                     children: [
                       Expanded(
@@ -57,22 +79,41 @@ class TrackResultDisplay extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: primarySelected
-                                ? FontWeight.w700
+                                ? FontWeight.w600
                                 : FontWeight.w500,
                             color: theme.colorScheme.onSurface,
                           ),
                         ),
                       ),
                       const SizedBox(width: 12),
-                      Text(
-                        primaryPace,
-                        style: TextStyle(
-                          fontFeatures: const [FontFeature.tabularFigures()],
-                          fontSize: 15,
-                          fontWeight: primarySelected
-                              ? FontWeight.w700
-                              : FontWeight.w500,
-                          color: theme.colorScheme.onSurface,
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              theme.colorScheme.primary.withValues(
+                                alpha: primarySelected ? 0.15 : 0.1,
+                              ),
+                              theme.colorScheme.primary.withValues(
+                                alpha: primarySelected ? 0.08 : 0.05,
+                              ),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          primaryPace,
+                          style: TextStyle(
+                            fontFeatures: const [FontFeature.tabularFigures()],
+                            fontSize: 16,
+                            fontWeight: primarySelected
+                                ? FontWeight.w700
+                                : FontWeight.w600,
+                            color: theme.colorScheme.onSurface,
+                          ),
                         ),
                       ),
                     ],
@@ -100,22 +141,49 @@ class TrackResultDisplay extends StatelessWidget {
                           child: Text(
                             '$label — $meters m',
                             style: TextStyle(
-                              fontSize: 15,
+                              fontSize: 14,
                               fontWeight: sel
-                                  ? FontWeight.w700
+                                  ? FontWeight.w600
                                   : FontWeight.w500,
-                              color: theme.colorScheme.onSurface,
+                              color: theme.colorScheme.onSurface.withValues(
+                                alpha: 0.8,
+                              ),
                             ),
                           ),
                         ),
                         const SizedBox(width: 12),
-                        Text(
-                          pace,
-                          style: TextStyle(
-                            fontFeatures: const [FontFeature.tabularFigures()],
-                            fontSize: 15,
-                            fontWeight: sel ? FontWeight.w700 : FontWeight.w500,
-                            color: theme.colorScheme.onSurface,
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                theme.colorScheme.primary.withValues(
+                                  alpha: sel ? 0.12 : 0.08,
+                                ),
+                                theme.colorScheme.primary.withValues(
+                                  alpha: sel ? 0.06 : 0.04,
+                                ),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            pace,
+                            style: TextStyle(
+                              fontFeatures: const [
+                                FontFeature.tabularFigures(),
+                              ],
+                              fontSize: 14,
+                              fontWeight: sel
+                                  ? FontWeight.w700
+                                  : FontWeight.w600,
+                              color: theme.colorScheme.onSurface.withValues(
+                                alpha: 0.9,
+                              ),
+                            ),
                           ),
                         ),
                       ],
@@ -149,29 +217,24 @@ class TrackResultDisplay extends StatelessWidget {
           ),
         ],
         if (fieldhouseResults.isNotEmpty && lapsResult.isNotEmpty)
-          const Divider(),
+          const Divider(height: 32),
         if (lapsResult.isNotEmpty) ...[
+          // Laps Section Header
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6),
+            padding: const EdgeInsets.only(bottom: 12),
             child: Row(
               children: [
-                Expanded(
-                  child: Text(
-                    'Laps',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                  ),
+                Icon(
+                  Icons.flag,
+                  size: 20,
+                  color: Theme.of(context).colorScheme.primary,
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
                 Text(
-                  lapsResult['exact'] ?? '',
+                  'Lap Calculations',
                   style: TextStyle(
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
@@ -179,54 +242,144 @@ class TrackResultDisplay extends StatelessWidget {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6),
+            padding: const EdgeInsets.symmetric(vertical: 8),
             child: Row(
               children: [
                 Expanded(
                   child: Text(
-                    'Rounded Up Laps',
+                    'Exact laps needed',
                     style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.onSurface,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.8),
                     ),
                   ),
                 ),
                 const SizedBox(width: 12),
-                Text(
-                  '${lapsResult['roundsUp']}',
-                  style: TextStyle(
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.onSurface,
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Theme.of(
+                          context,
+                        ).colorScheme.primary.withValues(alpha: 0.1),
+                        Theme.of(
+                          context,
+                        ).colorScheme.primary.withValues(alpha: 0.05),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    lapsResult['exact'] ?? '',
+                    style: TextStyle(
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
                   ),
                 ),
               ],
             ),
           ),
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6),
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Rounded up laps',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.8),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Theme.of(
+                          context,
+                        ).colorScheme.primary.withValues(alpha: 0.1),
+                        Theme.of(
+                          context,
+                        ).colorScheme.primary.withValues(alpha: 0.05),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    '${lapsResult['roundsUp']}',
+                    style: TextStyle(
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
             child: Row(
               children: [
                 Expanded(
                   child: Text(
                     'Total distance',
                     style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.onSurface,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.8),
                     ),
                   ),
                 ),
                 const SizedBox(width: 12),
-                Text(
-                  '${lapsResult['roundsUpMeters']} m',
-                  style: TextStyle(
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.onSurface,
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Theme.of(
+                          context,
+                        ).colorScheme.primary.withValues(alpha: 0.1),
+                        Theme.of(
+                          context,
+                        ).colorScheme.primary.withValues(alpha: 0.05),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    '${lapsResult['roundsUpMeters']} m',
+                    style: TextStyle(
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
                   ),
                 ),
               ],

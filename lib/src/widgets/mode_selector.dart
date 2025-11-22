@@ -16,13 +16,6 @@ class ModeSelector extends StatelessWidget {
     Widget chip(String label, CalcMode value) {
       final selected = mode == value;
       return ChoiceChip(
-        avatar: selected
-            ? Icon(
-                Icons.check_circle,
-                color: Colors.green, // use green for clear UX
-                size: 20,
-              )
-            : null,
         label: Text(
           label,
           style: TextStyle(
@@ -35,6 +28,7 @@ class ModeSelector extends StatelessWidget {
         onSelected: (_) => onChanged(value),
         backgroundColor: unselectedColor,
         selectedColor: selectedColor,
+        checkmarkColor: theme.colorScheme.onPrimary,
         elevation: 0,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         shape: RoundedRectangleBorder(

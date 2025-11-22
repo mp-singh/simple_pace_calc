@@ -38,13 +38,42 @@ class FieldhouseLaneSelector extends StatelessWidget {
             );
           }),
           decoration: InputDecoration(
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: Theme.of(
+                  context,
+                ).colorScheme.outline.withValues(alpha: 0.3),
+              ),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: Theme.of(
+                  context,
+                ).colorScheme.outline.withValues(alpha: 0.3),
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: Theme.of(context).colorScheme.primary,
+                width: 2,
+              ),
+            ),
             contentPadding: const EdgeInsets.symmetric(
-              vertical: 12,
-              horizontal: 12,
+              vertical: 15.5,
+              horizontal: 16,
             ),
             filled: true,
-            fillColor: Theme.of(context).inputDecorationTheme.fillColor,
+            fillColor: Theme.of(context).colorScheme.surface,
+          ),
+          isExpanded: true,
+          icon: Icon(
+            Icons.expand_more,
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.6),
           ),
         ),
         // distance preview removed from below the dropdown (now shown inline in items)

@@ -472,15 +472,45 @@ class _PaceHomePageState extends State<PaceHomePage> {
               Row(
                 children: [
                   Expanded(
+                    flex: 2,
                     child: ElevatedButton(
                       onPressed: _calculate,
-                      child: const Text('Calculate'),
+                      child: const Text(
+                        'Calculate',
+                        style: TextStyle(fontSize: 16),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        elevation: 2,
+                        shadowColor: Theme.of(
+                          context,
+                        ).colorScheme.shadow.withValues(alpha: 0.2),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
-                  OutlinedButton(
-                    onPressed: _clearAll,
-                    child: const Text('Clear'),
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: _clearAll,
+                      child: const Text(
+                        'Clear',
+                        style: TextStyle(fontSize: 16),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        side: BorderSide(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.outline.withValues(alpha: 0.5),
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -527,21 +557,48 @@ class _PaceHomePageState extends State<PaceHomePage> {
                             key: const ValueKey('distance'),
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
+                              // Distance Section Header
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.straighten,
+                                      size: 20,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.primary,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Distance Result',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w700,
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onSurface,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                               Padding(
                                 padding: const EdgeInsets.symmetric(
-                                  vertical: 6,
+                                  vertical: 8,
                                 ),
                                 child: Row(
                                   children: [
                                     Expanded(
                                       child: Text(
-                                        'Distance',
+                                        'Calculated distance',
                                         style: TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w600,
-                                          color: Theme.of(
-                                            context,
-                                          ).colorScheme.onSurface,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w500,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withValues(alpha: 0.8),
                                         ),
                                       ),
                                     ),
@@ -557,11 +614,11 @@ class _PaceHomePageState extends State<PaceHomePage> {
                                             Theme.of(context)
                                                 .colorScheme
                                                 .primary
-                                                .withValues(alpha: 0.1),
+                                                .withValues(alpha: 0.15),
                                             Theme.of(context)
                                                 .colorScheme
                                                 .primary
-                                                .withValues(alpha: 0.05),
+                                                .withValues(alpha: 0.08),
                                           ],
                                         ),
                                         borderRadius: BorderRadius.circular(6),
@@ -577,8 +634,8 @@ class _PaceHomePageState extends State<PaceHomePage> {
                                           fontFeatures: const [
                                             FontFeature.tabularFigures(),
                                           ],
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w600,
+                                          fontSize: 17,
+                                          fontWeight: FontWeight.w700,
                                           color: Theme.of(
                                             context,
                                           ).colorScheme.onSurface,
@@ -589,6 +646,35 @@ class _PaceHomePageState extends State<PaceHomePage> {
                                 ),
                               ),
                               if (_lastDistanceMeters != null) ...[
+                                const Divider(height: 24),
+                                // Conversions Section Header
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 12),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.compare_arrows,
+                                        size: 18,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .primary
+                                            .withValues(alpha: 0.7),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        'Conversions',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withValues(alpha: 0.9),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                                 Padding(
                                   padding: const EdgeInsets.symmetric(
                                     vertical: 6,
@@ -597,13 +683,14 @@ class _PaceHomePageState extends State<PaceHomePage> {
                                     children: [
                                       Expanded(
                                         child: Text(
-                                          'Equivalent kilometers',
+                                          'Kilometers',
                                           style: TextStyle(
-                                            fontSize: 15,
+                                            fontSize: 14,
                                             fontWeight: FontWeight.w500,
-                                            color: Theme.of(
-                                              context,
-                                            ).colorScheme.onSurface,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSurface
+                                                .withValues(alpha: 0.8),
                                           ),
                                         ),
                                       ),
@@ -615,7 +702,7 @@ class _PaceHomePageState extends State<PaceHomePage> {
                                             FontFeature.tabularFigures(),
                                           ],
                                           fontSize: 15,
-                                          fontWeight: FontWeight.w500,
+                                          fontWeight: FontWeight.w600,
                                           color: Theme.of(
                                             context,
                                           ).colorScheme.onSurface,
@@ -632,13 +719,14 @@ class _PaceHomePageState extends State<PaceHomePage> {
                                     children: [
                                       Expanded(
                                         child: Text(
-                                          'Equivalent miles',
+                                          'Miles',
                                           style: TextStyle(
-                                            fontSize: 15,
+                                            fontSize: 14,
                                             fontWeight: FontWeight.w500,
-                                            color: Theme.of(
-                                              context,
-                                            ).colorScheme.onSurface,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSurface
+                                                .withValues(alpha: 0.8),
                                           ),
                                         ),
                                       ),
@@ -650,7 +738,7 @@ class _PaceHomePageState extends State<PaceHomePage> {
                                             FontFeature.tabularFigures(),
                                           ],
                                           fontSize: 15,
-                                          fontWeight: FontWeight.w500,
+                                          fontWeight: FontWeight.w600,
                                           color: Theme.of(
                                             context,
                                           ).colorScheme.onSurface,
