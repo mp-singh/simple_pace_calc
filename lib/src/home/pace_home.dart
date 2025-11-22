@@ -486,79 +486,169 @@ class _PaceHomePageState extends State<PaceHomePage> {
               ),
 
               const SizedBox(height: 20),
-              const SizedBox(height: 20),
               Card(
+                elevation: 2,
+                shadowColor: Theme.of(
+                  context,
+                ).colorScheme.shadow.withValues(alpha: 0.1),
                 child: Padding(
                   padding: const EdgeInsets.all(16),
-                  child: _mode == CalcMode.track
-                      ? TrackResultDisplay(
-                          fieldhouseResults: _fieldhouseResults,
-                          lapsResult: _lapsResult,
-                          showMoreLanes: _showMoreLanes,
-                          onToggleShowMoreLanes: () => setState(() {
-                            _showMoreLanes = !_showMoreLanes;
-                          }),
-                          useCustomLap: _useCustomLap,
-                          fieldhouseLane: _fieldhouseLane,
-                          onLaneSelected: (int lane) {
-                            setState(() => _fieldhouseLane = lane);
-                            _calculate();
-                          },
-                          errorMessage: _result,
-                        )
-                      : _mode == CalcMode.distance
-                      ? Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 6),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      'Distance',
-                                      style: TextStyle(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w600,
-                                        color: Theme.of(
-                                          context,
-                                        ).colorScheme.onSurface,
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 300),
+                    transitionBuilder: (child, animation) => FadeTransition(
+                      opacity: animation,
+                      child: SlideTransition(
+                        position: Tween<Offset>(
+                          begin: const Offset(0, 0.1),
+                          end: Offset.zero,
+                        ).animate(animation),
+                        child: child,
+                      ),
+                    ),
+                    child: _mode == CalcMode.track
+                        ? TrackResultDisplay(
+                            key: const ValueKey('track'),
+                            fieldhouseResults: _fieldhouseResults,
+                            lapsResult: _lapsResult,
+                            showMoreLanes: _showMoreLanes,
+                            onToggleShowMoreLanes: () => setState(() {
+                              _showMoreLanes = !_showMoreLanes;
+                            }),
+                            useCustomLap: _useCustomLap,
+                            fieldhouseLane: _fieldhouseLane,
+                            onLaneSelected: (int lane) {
+                              setState(() => _fieldhouseLane = lane);
+                              _calculate();
+                            },
+                            errorMessage: _result,
+                          )
+                        : _mode == CalcMode.distance
+                        ? Column(
+                            key: const ValueKey('distance'),
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 6,
+                                ),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        'Distance',
+                                        style: TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w600,
+                                          color: Theme.of(
+                                            context,
+                                          ).colorScheme.onSurface,
+                                        ),
                                       ),
                                     ),
+                                    const SizedBox(width: 12),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          colors: [
+                                            Theme.of(context)
+                                                .colorScheme
+                                                .primary
+                                                .withValues(alpha: 0.1),
+                                            Theme.of(context)
+                                                .colorScheme
+                                                .primary
+                                                .withValues(alpha: 0.05),
+                                          ],
+                                        ),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        _result.isEmpty
+                                            ? ''
+                                            : _result.replaceFirst(
+                                                'Distance: ',
+                                                '',
+                                              ),
+                                        style: TextStyle(
+                                          fontFeatures: const [
+                                            FontFeature.tabularFigures(),
+                                          ],
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w600,
+                                          color: Theme.of(
+                                            context,
+                                          ).colorScheme.onSurface,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (_lastDistanceMeters != null) ...[
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 6,
                                   ),
-                                  const SizedBox(width: 12),
-                                  Text(
-                                    _result.isEmpty
-                                        ? ''
-                                        : _result.replaceFirst(
-                                            'Distance: ',
-                                            '',
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          'Equivalent kilometers',
+                                          style: TextStyle(
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w500,
+                                            color: Theme.of(
+                                              context,
+                                            ).colorScheme.onSurface,
                                           ),
-                                    style: TextStyle(
-                                      fontFeatures: const [
-                                        FontFeature.tabularFigures(),
-                                      ],
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w600,
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.onSurface,
-                                    ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Text(
+                                        '${(_lastDistanceMeters! / 1000.0).toStringAsFixed(3)} km',
+                                        style: TextStyle(
+                                          fontFeatures: const [
+                                            FontFeature.tabularFigures(),
+                                          ],
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w500,
+                                          color: Theme.of(
+                                            context,
+                                          ).colorScheme.onSurface,
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ],
-                              ),
-                            ),
-                            if (_lastDistanceMeters != null) ...[
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 6,
                                 ),
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        'Equivalent kilometers',
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 6,
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          'Equivalent miles',
+                                          style: TextStyle(
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w500,
+                                            color: Theme.of(
+                                              context,
+                                            ).colorScheme.onSurface,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Text(
+                                        '${(_lastDistanceMeters! / 1609.344).toStringAsFixed(3)} mi',
                                         style: TextStyle(
+                                          fontFeatures: const [
+                                            FontFeature.tabularFigures(),
+                                          ],
                                           fontSize: 15,
                                           fontWeight: FontWeight.w500,
                                           color: Theme.of(
@@ -566,66 +656,20 @@ class _PaceHomePageState extends State<PaceHomePage> {
                                           ).colorScheme.onSurface,
                                         ),
                                       ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Text(
-                                      '${(_lastDistanceMeters! / 1000.0).toStringAsFixed(3)} km',
-                                      style: TextStyle(
-                                        fontFeatures: const [
-                                          FontFeature.tabularFigures(),
-                                        ],
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w500,
-                                        color: Theme.of(
-                                          context,
-                                        ).colorScheme.onSurface,
-                                      ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 6,
-                                ),
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        'Equivalent miles',
-                                        style: TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w500,
-                                          color: Theme.of(
-                                            context,
-                                          ).colorScheme.onSurface,
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Text(
-                                      '${(_lastDistanceMeters! / 1609.344).toStringAsFixed(3)} mi',
-                                      style: TextStyle(
-                                        fontFeatures: const [
-                                          FontFeature.tabularFigures(),
-                                        ],
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w500,
-                                        color: Theme.of(
-                                          context,
-                                        ).colorScheme.onSurface,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
+                              ],
                             ],
-                          ],
-                        )
-                      : Text(
-                          _result.isEmpty ? 'Result will appear here' : _result,
-                          style: const TextStyle(fontSize: 16),
-                        ),
+                          )
+                        : Text(
+                            key: const ValueKey('other'),
+                            _result.isEmpty
+                                ? 'Result will appear here'
+                                : _result,
+                            style: const TextStyle(fontSize: 16),
+                          ),
+                  ),
                 ),
               ),
               const SizedBox(height: 8),
