@@ -395,9 +395,11 @@ class TrackResultDisplay extends StatelessWidget {
                     color: Theme.of(context).colorScheme.error,
                   ),
                 )
-              : const Text(
-                  'Result will appear here',
-                  style: TextStyle(fontSize: 16),
+              : Center(
+                  child: Text(
+                    'Result will appear here',
+                    style: const TextStyle(fontSize: 16),
+                  ),
                 ),
       ],
     );

@@ -104,7 +104,7 @@ String calculateTime({
     }
     lastDistanceMeters = distInUnits * 1609.344;
   }
-  return ('Distance: $out', lastDistanceMeters);
+  return (out, lastDistanceMeters);
 }
 
 (Map<String, List<Map<String, String>>>, Map<String, String>, double?)
